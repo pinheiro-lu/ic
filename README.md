@@ -21,12 +21,15 @@
   - [`icpc/brazil/2024/subreg/b`](icpc/brazil/2024/subreg/b/sol.cpp) ([`105327B`](https://codeforces.com/gym/105327/submission/389778446)): *Bacon Number*
   - [`icpc/brazil/2023/regional/m`](icpc/brazil/2023/regional/m/sol.cpp) ([`104736M`](https://codeforces.com/gym/104736/submission/390501177)): *Meeting Point* (Constrained Shortest Path / Modified Dijkstra)
   - [`icpc/argentina/tap/2023/g`](icpc/argentina/tap/2023/g/sol.cpp) ([`104603G`](https://codeforces.com/gym/104603/submission/395107750)): *Great Heights* (Sweep-line + Kruskal/DSU MST)
+  - [Beecrowd `2346` / VJudge `847901B` (*Back to the Future / De Volta para o Futuro*)](https://vjudge.net/contest/847901#problem/B): Degree-Constrained Maximum Induced Subgraph (Greedy Graph Peeling)
+  - [Beecrowd `2354` / VJudge `847901K` (*Kill the Werewolf / Mate o Lobisomem*)](https://vjudge.net/contest/847901#problem/K): Maximum Flow / Dinic Vote Allocation
   - [CF `1985H1` (*Maximize the Largest Component*)](https://codeforces.com/contest/1985/submission/393970465): DSU Grid Component Maximization
 - **Greedy, Binary Search, Geometric & Scheduling Optimization**
   - [`atCoder/begginer/470/b`](atCoder/begginer/470/b/sol.cpp) ([`abc470_b`](https://atcoder.jp/contests/abc470/submissions/78206269)): Replacement Minimization
   - [AtCoder `abc470_c`](https://atcoder.jp/contests/abc470/submissions/78292813): ABC 470 C
   - [`icpc/brazil/2026/esquenta/f`](icpc/brazil/2026/esquenta/f/sol.cpp) ([MOJ `esquenta-uberlandia-2026#fila-de-julgamento`](https://moj.naquadah.com.br/treino/problema/?id=esquenta-uberlandia-2026%23fila-de-julgamento)): *Fila de Julgamento* (Total Completion Time Minimization)
   - [`icpc/brazil/2025/subreg/l`](icpc/brazil/2025/subreg/l/sol.cpp) ([`106073L`](https://codeforces.com/gym/106073/submission/388960555)): *LLMs* (Dot-Product Similarity Maximization)
+  - [Beecrowd `2345` / VJudge `847901A` (*Assigning Teams / Atribuindo Equipes*)](https://vjudge.net/contest/847901#problem/A): Team Skill Difference Minimization
   - [`icpc/brazil/2016/regional/d`](icpc/brazil/2016/regional/d/sol.cpp) ([Beecrowd `2348`](https://judge.beecrowd.com/pt/runs/code/49926901) / [VJudge `847901D`](https://vjudge.net/contest/847901#problem/D)): *Dating On-Line / Encontros On-Line* (Polygon Area Maximization)
   - [`icpc/brazil/2016/regional/j`](icpc/brazil/2016/regional/j/sol.cpp) ([Beecrowd `2353`](https://judge.beecrowd.com/pt/runs/code/49925919) / [VJudge `847901J`](https://vjudge.net/contest/847901#problem/J)): *Just in Time / Bem na Hora* (Largest Prime $\le N$)
   - [ICPC `104736C` (*Candy Rush*)](https://codeforces.com/gym/104736/submission/391806536): Longest Balanced Subarray
