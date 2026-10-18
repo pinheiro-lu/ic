@@ -9,7 +9,7 @@ A high-performance interactive visualizer, sandbox editor, and CLI toolkit for t
 - **Interactive 60fps Web Studio**: Smooth canvas navigation with zooming, panning, grid coordinates, and dynamic color palettes (Festive Emerald, Official Viridis, Rainbow Spectrum, Natural Pine, Collision Health).
 - **Exact Geometry & Collision Detection**: Full 15-vertex tree polygon transformations matching Kaggle specifications, coupled with real-time SAT & ray-casting collision detection for interior polygon overlaps.
 - **Direct Canvas Sandbox Editing**: Click and drag trees directly on the canvas, rotate with the circular gizmo or mouse wheel, nudge with arrow keys, and watch bounding square & score update live with undo/redo support.
-- **Preloaded Datasets**: Comes preloaded with both the **2nd Place Top Solution (~68.80)** and the **Sample Baseline (173.65)**, plus drag-and-drop support for any custom submission CSV.
+- **Preloaded Dataset**: Comes preloaded with the **Getting Started Submission (`submission.csv`, ~180.18)**, plus drag-and-drop support for any custom submission CSV.
 - **Head-to-Head Comparison Mode**: Compare any two submissions side-by-side or via translucent ghost overlay with per-configuration $\Delta \text{Score}$ and $\Delta \text{Side}$ breakdowns.
 - **All 200 Configurations Analytics**: Interactive modal featuring score/side/density curves vs $N$, a 10×20 visual gallery, and sortable problem table.
 - **Comprehensive Python CLI**: Evaluate submissions, check collisions, generate publication-ready Matplotlib plots, compare submissions, or launch the local web server.
@@ -36,25 +36,25 @@ The `visualizer.py` script provides command-line tools for scoring, static rende
 
 ### 1. Evaluate Official Score & Overlaps
 ```bash
-python3 visualizer.py --file data/top_solution.csv --score
+python3 visualizer.py --file submission.csv --score
 ```
 *Outputs total score ($\sum L_n^2 / n$), average score per $N$, collision count, and highest/lowest density configurations.*
 
 ### 2. Compare Two Submissions Head-to-Head
 ```bash
-python3 visualizer.py --compare data/top_solution.csv data/sample_submission.csv
+python3 visualizer.py --compare submission.csv other_submission.csv
 ```
 *Outputs win/loss/tie counts across all 200 configurations, total score delta, and top 5 largest improvements.*
 
 ### 3. Generate Static Image for Configuration N
 ```bash
 # Save high-resolution PNG for N=42
-python3 visualizer.py --file data/top_solution.csv -n 42 --out tree_42.png
+python3 visualizer.py --file submission.csv -n 42 --out tree_42.png
 ```
 
 ### 4. Generate 10×20 Poster of All 200 Configurations
 ```bash
-python3 visualizer.py --file data/top_solution.csv --gallery --out santa_2025_all.png
+python3 visualizer.py --file submission.csv --gallery --out santa_2025_all.png
 ```
 
 ### 5. Run Self-Test
@@ -109,16 +109,15 @@ Touching at boundary vertices or edges without penetrating the interior is stric
 ## 📁 Repository Structure
 
 ```
-├── visualizer.py          # Python CLI, validator, plotter, and web server
-├── run.sh                 # 1-click launcher script
-├── README.md              # Project documentation
-├── data/
-│   ├── sample_submission.csv  # Kaggle baseline benchmark (Score: 173.65)
-│   └── top_solution.csv       # 2nd place top solution (Score: 68.80)
+├── visualizer.py                      # Python CLI, validator, plotter, and web server
+├── run.sh                             # 1-click launcher script
+├── santa-2025-getting-started.ipynb   # Getting started notebook
+├── submission.csv                     # Getting started submission (Score: 180.18)
+├── README.md                          # Project documentation
 └── web/
-    ├── index.html         # Interactive web visualizer UI
-    ├── style.css          # Holiday dark/light themes & glassmorphism
-    ├── app.js             # Canvas engine, geometry, SAT collisions & sandbox
+    ├── index.html                     # Interactive web visualizer UI
+    ├── style.css                      # Holiday dark/light themes & glassmorphism
+    ├── app.js                         # Canvas engine, geometry, SAT collisions & sandbox
     └── data/
-        └── datasets.js    # Preloaded datasets for immediate offline viewing
+        └── datasets.js                # Preloaded dataset for immediate offline viewing
 ```

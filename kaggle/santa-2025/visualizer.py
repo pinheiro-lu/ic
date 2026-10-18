@@ -423,13 +423,13 @@ def run_self_test():
     print("✓ 90-degree rotation transforms correctly")
 
     # 3. Reference score check
-    sample_csv = Path(__file__).parent / "data" / "top_solution.csv"
+    sample_csv = Path(__file__).parent / "submission.csv"
     if sample_csv.exists():
         res = evaluate_submission(str(sample_csv), verbose=False)
         score = res["total_score"]
-        expected = 68.800645455805
-        assert abs(score - expected) < 1e-6, f"Top solution score mismatch: {score} vs {expected}"
-        print(f"✓ Top solution total score verified: {score:.12f}")
+        expected = 180.183033203576
+        assert abs(score - expected) < 1e-6, f"Submission score mismatch: {score} vs {expected}"
+        print(f"✓ Submission total score verified: {score:.12f}")
 
     print("All self-tests passed successfully! 🎉")
 
@@ -442,7 +442,7 @@ def main():
     parser.add_argument("--serve", action="store_true", help="Start the interactive web visualizer server")
     parser.add_argument("--port", type=int, default=8000, help="Port for web server (default: 8000)")
     parser.add_argument("--no-browser", action="store_true", help="Do not automatically open web browser")
-    parser.add_argument("-f", "--file", type=str, default="data/top_solution.csv", help="Submission CSV path")
+    parser.add_argument("-f", "--file", type=str, default="submission.csv", help="Submission CSV path")
     parser.add_argument("--score", action="store_true", help="Compute official score and check for overlaps")
     parser.add_argument("-n", type=int, help="Configuration N to visualize (1-200)")
     parser.add_argument("-o", "--out", type=str, help="Output image file path (.png or .svg)")
