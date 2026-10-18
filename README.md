@@ -2,7 +2,7 @@
 
 ## Heuristic & Continuous Optimization
 - [`kaggle/santa-2025`](kaggle/santa-2025): Christmas Tree Packing Challenge
-- [`ahc/069`](ahc/069): AtCoder Heuristic Contest 069 (includes [`experiment_log.md`](ahc/069/experiment_log.md), [`plan_moves_activation.md`](ahc/069/plan_moves_activation.md), and iterations `v0`–`v11`)
+- [`ahc/069`](ahc/069): AtCoder Heuristic Contest 069
 
 ## Combinatorial, DP & Graph Optimization (Aug–Oct 2026)
 - **DP / Knapsack**
