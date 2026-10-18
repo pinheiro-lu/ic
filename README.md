@@ -28,6 +28,7 @@
   - [`atCoder/begginer/470/b`](atCoder/begginer/470/b/sol.cpp) ([`abc470_b`](https://atcoder.jp/contests/abc470/submissions/78206269)): Replacement Minimization
   - [AtCoder `abc470_c`](https://atcoder.jp/contests/abc470/submissions/78292813): ABC 470 C
   - [`icpc/brazil/2026/esquenta/f`](icpc/brazil/2026/esquenta/f/sol.cpp) ([MOJ `esquenta-uberlandia-2026#fila-de-julgamento`](https://moj.naquadah.com.br/treino/problema/?id=esquenta-uberlandia-2026%23fila-de-julgamento)): *Fila de Julgamento* (Total Completion Time Minimization)
+  - [MOJ `mdp-br-fp-2026#k-contingency` (*Contingência*)](https://moj.naquadah.com.br/relatorio/icpc-latam-br-fp-2026/statements/K.html): Worst-Case Minimum Draws Optimization (Subregional 2026)
   - [`icpc/brazil/2025/subreg/l`](icpc/brazil/2025/subreg/l/sol.cpp) ([`106073L`](https://codeforces.com/gym/106073/submission/388960555)): *LLMs* (Dot-Product Similarity Maximization)
   - [Beecrowd `2345` / VJudge `847901A` (*Assigning Teams / Atribuindo Equipes*)](https://vjudge.net/contest/847901#problem/A): Team Skill Difference Minimization
   - [`icpc/brazil/2016/regional/d`](icpc/brazil/2016/regional/d/sol.cpp) ([Beecrowd `2348`](https://judge.beecrowd.com/pt/runs/code/49926901) / [VJudge `847901D`](https://vjudge.net/contest/847901#problem/D)): *Dating On-Line / Encontros On-Line* (Polygon Area Maximization)
