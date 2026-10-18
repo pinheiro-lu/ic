@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kaggle Santa 2025: Christmas Tree Packing Visualizer</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎄</text></svg>">
+</head>
+<body class="theme-dark">
+  <header class="app-header">
+    <div class="header-left">
+      <div class="logo">
+        <span class="tree-icon">🎄</span>
+        <div class="logo-text">
+          <h1>Santa 2025 Visualizer</h1>
+          <span class="subtitle">Christmas Tree Packing Challenge</span>
+        </div>
+      </div>
+      
+      <div class="dataset-control">
+        <label for="datasetSelect">Dataset:</label>
+        <select id="datasetSelect" class="form-select">
+          <!-- Populated dynamically -->
+        </select>
+        <button id="uploadBtn" class="btn btn-outline" title="Upload custom submission CSV">
+          📁 Load CSV
+        </button>
+      </div>
+    </div>
+
+    <!-- Quick Stats Bar -->
+    <div class="header-stats" id="headerStats">
+      <div class="stat-pill" title="Current Configuration">
+        <span class="label">N:</span>
+        <span class="val" id="statN">1</span>
+      </div>
+      <div class="stat-pill" title="Bounding Square Side Length (L_n)">
+        <span class="label">Side L:</span>
+        <span class="val highlight" id="statSide">0.813173</span>
+      </div>
+      <div class="stat-pill" title="Score for this N: L_n^2 / N">
+        <span class="label">Score:</span>
+        <span class="val" id="statScore">0.661250</span>
+      </div>
+      <div class="stat-pill" title="Packing Density: (N × 0.245625) / L_n^2">
+        <span class="label">Density:</span>
+        <span class="val" id="statDensity">37.1%</span>
+      </div>
+      <div class="stat-pill" title="Total Score Across All 200 Configurations">
+        <span class="label">Total:</span>
+        <span class="val gold" id="statTotalScore">68.800645</span>
+      </div>
+      <div class="stat-pill" id="statCollisionPill" title="Collision / Overlap Status">
+        <span class="val status-ok" id="statCollision">✓ Valid</span>
+      </div>
+    </div>
+
+    <div class="header-right">
+      <button id="compareModeBtn" class="btn btn-outline" title="Compare two submissions">
+        ⚖️ Compare
+      </button>
+      <button id="overviewBtn" class="btn btn-outline" title="View all 200 configurations & score curves">
+        📊 Overview
+      </button>
+      <div class="dropdown">
+        <button id="exportDropdownBtn" class="btn btn-outline">
+          💾 Export ▾
+        </button>
+        <div class="dropdown-menu" id="exportMenu">
+          <a href="#" id="exportPngBtn">📸 Save View as PNG</a>
+          <a href="#" id="exportSvgBtn">📐 Save View as SVG</a>
+          <div class="dropdown-divider"></div>
+          <a href="#" id="exportConfigCsvBtn">📄 Export Config N (CSV)</a>
+          <a href="#" id="exportFullCsvBtn">📦 Export Full Submission (CSV)</a>
+        </div>
+      </div>
+      <button id="themeToggleBtn" class="btn btn-icon" title="Toggle Dark/Light Mode">
+        ☀️
+      </button>
+    </div>
+  </header>
+
+  <main class="app-main">
+    <!-- Center Canvas Area -->
+    <div class="canvas-container" id="canvasContainer">
+      <canvas id="packingCanvas"></canvas>
+
+      <!-- Viewport Floating Controls -->
+      <div class="viewport-toolbar">
+        <button id="zoomInBtn" class="vp-btn" title="Zoom In (+)">➕</button>
+        <button id="zoomOutBtn" class="vp-btn" title="Zoom Out (-)">➖</button>
+        <button id="fitViewBtn" class="vp-btn" title="Fit to Square (Space)">⛶ Fit</button>
+        <button id="resetOriginBtn" class="vp-btn" title="Center at Origin (0,0)">🎯 Center</button>
+        <div class="coord-display" id="coordDisplay">X: 0.000, Y: 0.000</div>
+      </div>
+
+      <!-- Selected Tree Banner (Floating) -->
+      <div class="tree-banner hidden" id="treeBanner">
+        <div class="tree-banner-info">
+          <span class="tree-banner-title" id="bannerTreeTitle">Tree #0</span>
+          <span class="tree-banner-coords" id="bannerTreeCoords">(x: 0.000, y: 0.000, deg: 0.0°)</span>
+        </div>
+        <div class="tree-banner-actions">
+          <span class="hint">🖱️ Drag to move | 🎡 Wheel / R to rotate</span>
+          <button id="bannerDeselectBtn" class="btn btn-sm btn-outline">✕ Done</button>
+        </div>
+      </div>
+
+      <!-- Compare Mode Overlay Banner -->
+      <div class="compare-banner hidden" id="compareBanner">
+        <span class="compare-tag primary-tag">Primary: <b id="cmpNameA">Top Solution</b></span>
+        <span class="compare-vs">vs</span>
+        <span class="compare-tag secondary-tag">Compare: <b id="cmpNameB">Baseline</b></span>
+        <span class="compare-diff" id="cmpDiffBadge">Δ Score: -104.85</span>
+        <button id="closeCompareBtn" class="btn btn-sm btn-outline">✕ Exit</button>
+      </div>
+    </div>
+
+    <!-- Right Sidebar Controls -->
+    <aside class="app-sidebar" id="appSidebar">
+      <!-- Section 1: Navigation -->
+      <section class="sidebar-section">
+        <div class="section-header">
+          <h3>Configuration Navigation</h3>
+          <span class="section-tag">N = 1..200</span>
+        </div>
+        <div class="nav-control-group">
+          <div class="nav-slider-row">
+            <button id="prevNBtn" class="btn btn-icon" title="Previous Configuration (←)">◀</button>
+            <input type="range" id="nSlider" min="1" max="200" value="1" class="form-range">
+            <button id="nextNBtn" class="btn btn-icon" title="Next Configuration (→)">▶</button>
+            <input type="number" id="nInput" min="1" max="200" value="1" class="form-input n-number-input">
+          </div>
+          <div class="quick-jump-row">
+            <button class="jump-pill" data-n="1">N=1</button>
+            <button class="jump-pill" data-n="10">N=10</button>
+            <button class="jump-pill" data-n="50">N=50</button>
+            <button class="jump-pill" data-n="100">N=100</button>
+            <button class="jump-pill" data-n="150">N=150</button>
+            <button class="jump-pill" data-n="200">N=200</button>
+          </div>
+          <div class="action-row">
+            <button id="jumpWorstBtn" class="btn btn-sm btn-outline" title="Jump to configuration with lowest packing density">
+              ⚠️ Worst Density
+            </button>
+            <button id="jumpCollisionBtn" class="btn btn-sm btn-outline" title="Jump to next configuration with overlaps">
+              🚨 Next Collision
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section 2: Selected Tree Inspector -->
+      <section class="sidebar-section" id="inspectorSection">
+        <div class="section-header">
+          <h3>Tree Inspector</h3>
+          <span class="tree-badge" id="selectedTreeBadge">None Selected</span>
+        </div>
+        <div id="inspectorContent" class="inspector-content disabled-section">
+          <div class="input-grid">
+            <div class="input-col">
+              <label for="treeXInput">Center X:</label>
+              <div class="stepper-input">
+                <input type="number" step="0.01" id="treeXInput" class="form-input">
+              </div>
+            </div>
+            <div class="input-col">
+              <label for="treeYInput">Center Y:</label>
+              <div class="stepper-input">
+                <input type="number" step="0.01" id="treeYInput" class="form-input">
+              </div>
+            </div>
+          </div>
+          <div class="angle-row">
+            <label for="treeDegInput">Rotation Angle (°):</label>
+            <div class="angle-input-wrap">
+              <input type="number" step="1" id="treeDegInput" class="form-input">
+              <input type="range" id="treeDegSlider" min="0" max="360" step="0.5" class="form-range">
+            </div>
+            <div class="angle-quick-btns">
+              <button class="btn btn-xs btn-outline angle-btn" data-angle="0">0°</button>
+              <button class="btn btn-xs btn-outline angle-btn" data-angle="45">45°</button>
+              <button class="btn btn-xs btn-outline angle-btn" data-angle="90">90°</button>
+              <button class="btn btn-xs btn-outline angle-btn" data-angle="180">180°</button>
+              <button class="btn btn-xs btn-outline angle-btn" data-angle="270">270°</button>
+              <button class="btn btn-xs btn-outline" id="rotateMinus15Btn">-15°</button>
+              <button class="btn btn-xs btn-outline" id="rotatePlus15Btn">+15°</button>
+            </div>
+          </div>
+          <div class="inspector-actions">
+            <button id="deleteTreeBtn" class="btn btn-sm btn-danger">🗑️ Delete</button>
+            <button id="duplicateTreeBtn" class="btn btn-sm btn-outline">📋 Duplicate</button>
+            <button id="deselectTreeBtn" class="btn btn-sm btn-outline">✕ Deselect</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section 3: Sandbox & Tweaks -->
+      <section class="sidebar-section">
+        <div class="section-header">
+          <h3>Sandbox & Editing</h3>
+          <div class="history-controls">
+            <button id="undoBtn" class="btn btn-xs btn-outline" title="Undo (Ctrl+Z)" disabled>↩</button>
+            <button id="redoBtn" class="btn btn-xs btn-outline" title="Redo (Ctrl+Y)" disabled>↪</button>
+          </div>
+        </div>
+        <div class="sandbox-buttons">
+          <button id="addTreeBtn" class="btn btn-sm btn-outline">➕ Add Tree</button>
+          <button id="centerAllTreesBtn" class="btn btn-sm btn-outline">🎯 Auto-Center</button>
+          <button id="resetConfigBtn" class="btn btn-sm btn-outline" title="Reset this N to original dataset values">
+            🔄 Reset N
+          </button>
+        </div>
+      </section>
+
+      <!-- Section 4: Display Options -->
+      <section class="sidebar-section">
+        <div class="section-header">
+          <h3>Display Settings</h3>
+        </div>
+        <div class="display-options-grid">
+          <div class="form-group">
+            <label for="colorSchemeSelect">Color Palette:</label>
+            <select id="colorSchemeSelect" class="form-select">
+              <option value="emerald">🎄 Festive Emerald</option>
+              <option value="viridis">🌈 Official Viridis</option>
+              <option value="rainbow">🎨 Rainbow by Index</option>
+              <option value="pine">🌲 Natural Pine</option>
+              <option value="status">🚨 Collision Status</option>
+            </select>
+          </div>
+
+          <div class="toggle-group">
+            <label class="toggle-item">
+              <input type="checkbox" id="toggleSquare" checked>
+              <span>Bounding Square (L × L)</span>
+            </label>
+            <label class="toggle-item">
+              <input type="checkbox" id="toggleBBox" checked>
+              <span>Tight Bounding Box (W × H)</span>
+            </label>
+            <label class="toggle-item">
+              <input type="checkbox" id="toggleLabels" checked>
+              <span>Tree Index Labels</span>
+            </label>
+            <label class="toggle-item">
+              <input type="checkbox" id="toggleCenters" checked>
+              <span>Center Points (x, y)</span>
+            </label>
+            <label class="toggle-item">
+              <input type="checkbox" id="toggleTipStars" checked>
+              <span>Tip Stars / Direction</span>
+            </label>
+            <label class="toggle-item">
+              <input type="checkbox" id="toggleGrid" checked>
+              <span>Coordinate Grid & Axes</span>
+            </label>
+            <label class="toggle-item">
+              <input type="checkbox" id="toggleCollisions" checked>
+              <span>Highlight Overlaps</span>
+            </label>
+          </div>
+
+          <div class="form-group opacity-row">
+            <label for="treeOpacitySlider">Tree Fill Opacity: <span id="opacityVal">75%</span></label>
+            <input type="range" id="treeOpacitySlider" min="0.1" max="1.0" step="0.05" value="0.75" class="form-range">
+          </div>
+        </div>
+      </section>
+
+      <!-- Section 5: Configuration Details Table -->
+      <section class="sidebar-section">
+        <div class="section-header">
+          <h3>Problem Metrics</h3>
+        </div>
+        <table class="metrics-table">
+          <tr>
+            <td>Tree Count (N):</td>
+            <td class="text-right" id="metricN">1</td>
+          </tr>
+          <tr>
+            <td>Square Side Length (L):</td>
+            <td class="text-right font-mono" id="metricSide">0.813173</td>
+          </tr>
+          <tr>
+            <td>Config Score (L² / N):</td>
+            <td class="text-right font-mono" id="metricScore">0.661250</td>
+          </tr>
+          <tr>
+            <td>Bounding Square Area (L²):</td>
+            <td class="text-right font-mono" id="metricSqArea">0.661250</td>
+          </tr>
+          <tr>
+            <td>Total Tree Area (N × 0.245625):</td>
+            <td class="text-right font-mono" id="metricTreeArea">0.245625</td>
+          </tr>
+          <tr>
+            <td>Packing Density:</td>
+            <td class="text-right font-mono highlight" id="metricDensity">37.15%</td>
+          </tr>
+          <tr>
+            <td>Overlap Status:</td>
+            <td class="text-right" id="metricOverlap">0 collisions</td>
+          </tr>
+        </table>
+      </section>
+    </aside>
+  </main>
+
+  <!-- Modals -->
+
+  <!-- Modal 1: Overview & Analytics (All 200) -->
+  <div class="modal-backdrop hidden" id="overviewModal">
+    <div class="modal-card modal-large">
+      <div class="modal-header">
+        <h2>📊 Overview of All 200 Configurations</h2>
+        <button class="modal-close" id="closeOverviewBtn">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="analytics-tabs">
+          <button class="tab-btn active" data-tab="chartTab">📈 Score & Density Curves</button>
+          <button class="tab-btn" data-tab="galleryTab">🖼️ 10×20 Visual Gallery</button>
+          <button class="tab-btn" data-tab="tableTab">📋 Problem Table</button>
+        </div>
+
+        <!-- Tab 1: Chart -->
+        <div class="tab-content active" id="chartTab">
+          <div class="chart-container">
+            <div class="chart-header">
+              <div class="chart-metric-select">
+                <button class="chart-opt-btn active" data-metric="score">Score (L²/N)</button>
+                <button class="chart-opt-btn" data-metric="side">Side Length (L)</button>
+                <button class="chart-opt-btn" data-metric="density">Packing Density (%)</button>
+              </div>
+              <div class="chart-hint">💡 Click any point on the curve to navigate directly to that configuration.</div>
+            </div>
+            <div class="svg-chart-wrap" id="svgChartWrap">
+              <svg id="overviewChartSvg" viewBox="0 0 900 320"></svg>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab 2: Gallery -->
+        <div class="tab-content" id="galleryTab">
+          <div class="gallery-toolbar">
+            <span class="gallery-hint">All 200 configurations rendered at a glance:</span>
+            <input type="text" id="gallerySearch" placeholder="Filter N (e.g. 100)..." class="form-input form-input-sm">
+          </div>
+          <div class="gallery-grid" id="galleryGrid">
+            <!-- 200 mini cards rendered dynamically -->
+          </div>
+        </div>
+
+        <!-- Tab 3: Table -->
+        <div class="tab-content" id="tableTab">
+          <div class="table-scroll-wrap">
+            <table class="data-table" id="overviewTable">
+              <thead>
+                <tr>
+                  <th data-sort="n">N ▾</th>
+                  <th data-sort="side">Side (L)</th>
+                  <th data-sort="score">Score (L²/N)</th>
+                  <th data-sort="density">Density</th>
+                  <th data-sort="collisions">Collisions</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="overviewTableBody">
+                <!-- Rows injected dynamically -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 2: CSV Upload / Paste -->
+  <div class="modal-backdrop hidden" id="uploadModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h2>📁 Load Custom Submission CSV</h2>
+        <button class="modal-close" id="closeUploadBtn">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="upload-dropzone" id="dropzone">
+          <div class="dropzone-icon">📥</div>
+          <p class="dropzone-text">Drag & drop your <b>submission.csv</b> here, or click to browse</p>
+          <input type="file" id="csvFileInput" accept=".csv,.txt" class="hidden">
+          <button id="browseFileBtn" class="btn btn-outline">Browse Computer</button>
+        </div>
+
+        <div class="upload-divider"><span>OR PASTE CSV TEXT</span></div>
+
+        <div class="paste-wrap">
+          <textarea id="csvPasteArea" placeholder="id,x,y,deg&#10;001_0,s0.0,s0.0,s90.0&#10;..."></textarea>
+        </div>
+
+        <div class="upload-options">
+          <label>
+            Dataset Name:
+            <input type="text" id="customDatasetName" value="Custom Submission" class="form-input">
+          </label>
+        </div>
+
+        <div id="uploadStatusMsg" class="upload-status hidden"></div>
+      </div>
+      <div class="modal-footer">
+        <button id="cancelUploadBtn" class="btn btn-outline">Cancel</button>
+        <button id="confirmUploadBtn" class="btn btn-primary">Load Submission</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 3: Compare Setup -->
+  <div class="modal-backdrop hidden" id="compareModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h2>⚖️ Setup Side-by-Side Comparison</h2>
+        <button class="modal-close" id="closeCompareModalBtn">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="cmpSelectA">Primary Dataset (Solid):</label>
+          <select id="cmpSelectA" class="form-select"></select>
+        </div>
+        <div class="form-group">
+          <label for="cmpSelectB">Comparison Dataset (Ghost Overlay):</label>
+          <select id="cmpSelectB" class="form-select"></select>
+        </div>
+        <div class="form-group">
+          <label>Comparison Render Mode:</label>
+          <div class="radio-group">
+            <label><input type="radio" name="cmpMode" value="overlay" checked> Overlay (Primary + Ghost)</label>
+            <label><input type="radio" name="cmpMode" value="sideBySide"> Side by Side</label>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="cancelCompareBtn" class="btn btn-outline">Cancel</button>
+        <button id="startCompareBtn" class="btn btn-primary">Start Comparison</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="data/datasets.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
