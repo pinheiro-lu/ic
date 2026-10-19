@@ -38,7 +38,7 @@ The `visualizer.py` script provides command-line tools for scoring, static rende
 ```bash
 python3 visualizer.py --file submission.csv --score
 ```
-*Outputs total score ($\sum L_n^2 / n$), average score per $N$, collision count, and highest/lowest density configurations.*
+*Outputs total score $\left(\sum L_n^2 / n\right)$, average score per $N$, collision count, and highest/lowest density configurations.*
 
 ### 2. Compare Two Submissions Head-to-Head
 ```bash
@@ -69,8 +69,8 @@ python3 visualizer.py --test
 
 | Key | Action |
 | :--- | :--- |
-| `←` / `→` | Previous / Next Configuration ($N \pm 1$) |
-| `[` / `]` | Jump by 10 Configurations ($N \pm 10$) |
+| `←` / `→` | Previous / Next Configuration $(N \pm 1)$ |
+| `[` / `]` | Jump by 10 Configurations $(N \pm 10)$ |
 | `Space` or `F` | Auto-fit view to bounding square |
 | `R` / `Shift + R` | Rotate selected tree by $+15^\circ$ / $-15^\circ$ |
 | `Alt + Wheel` | Rotate selected tree smoothly under cursor |
@@ -85,23 +85,40 @@ python3 visualizer.py --test
 
 ### 1. The Tree Shape
 A symmetrical 15-vertex polygon consisting of 3 tiered foliage layers and a rectangular trunk:
-- **Trunk**: Width = 0.15, Height = 0.2 (Bottom at $y = -0.2$, Base at $y = 0.0$)
-- **Bottom Tier**: Base Width = 0.7 ($y = 0.0$ to $0.25$)
-- **Middle Tier**: Base Width = 0.4 ($y = 0.25$ to $0.5$)
-- **Top Tier**: Base Width = 0.25 ($y = 0.5$ to Tip at $y = 0.8$)
-- **Analytical Area**: Exactly **$0.245625$**
+- **Trunk**: Width = `0.15`, Height = `0.2`, from Bottom at $y = -0.2$ to Base at $y = 0.0$
+- **Bottom Tier**: Base Width = `0.7`, from $y = 0.0$ to $y = 0.25$
+- **Middle Tier**: Base Width = `0.4`, from $y = 0.25$ to $y = 0.5$
+- **Top Tier**: Base Width = `0.25`, from $y = 0.5$ to Tip at $y = 0.8$
+- **Analytical Area**: Exactly $0.245625$
 
 ### 2. The Evaluation Metric
-For each configuration $n \in [1, 200]$:
-$$L_n = \max(x_{\max} - x_{\min}, y_{\max} - y_{\min})$$
-$$\text{Score}_n = \frac{L_n^2}{n}$$
-$$\text{Total Score} = \sum_{n=1}^{200} \text{Score}_n$$
 
-$$\text{Packing Density}_n = \frac{n \times 0.245625}{L_n^2} = \frac{0.245625}{\text{Score}_n}$$
+For each configuration $n \in \{1, \dots, 200\}$:
+
+$$
+L_n = \max(x_{\max} - x_{\min},\; y_{\max} - y_{\min})
+$$
+
+$$
+\text{Score}_n = \frac{L_n^2}{n}
+$$
+
+$$
+\text{Total Score} = \sum_{n=1}^{200} \text{Score}_n = \sum_{n=1}^{200} \frac{L_n^2}{n}
+$$
+
+$$
+\text{Packing Density}_n = \frac{n \times 0.245625}{L_n^2} = \frac{0.245625}{\text{Score}_n}
+$$
 
 ### 3. Collision Constraint
+
 Two trees overlap (invalid) if and only if their interiors intersect with non-zero area:
-$$\text{Intersects}(A, B) \land \neg \text{Touches}(A, B)$$
+
+$$
+\text{Intersects}(A, B) \land \neg \text{Touches}(A, B)
+$$
+
 Touching at boundary vertices or edges without penetrating the interior is strictly valid.
 
 ---
