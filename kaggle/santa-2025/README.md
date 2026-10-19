@@ -38,13 +38,13 @@ The `visualizer.py` script provides command-line tools for scoring, static rende
 ```bash
 python3 visualizer.py --file submission.csv --score
 ```
-*Outputs total score $\left(\sum L_n^2 / n\right)$, average score per $N$, collision count, and highest/lowest density configurations.*
+Outputs total score $\sum \frac{L_n^2}{n}$, average score per $N$, collision count, and highest/lowest density configurations.
 
 ### 2. Compare Two Submissions Head-to-Head
 ```bash
 python3 visualizer.py --compare submission.csv other_submission.csv
 ```
-*Outputs win/loss/tie counts across all 200 configurations, total score delta, and top 5 largest improvements.*
+Outputs win/loss/tie counts across all 200 configurations, total score delta, and top 5 largest improvements.
 
 ### 3. Generate Static Image for Configuration N
 ```bash
@@ -61,7 +61,7 @@ python3 visualizer.py --file submission.csv --gallery --out santa_2025_all.png
 ```bash
 python3 visualizer.py --test
 ```
-*Validates analytical area (0.245625), rotation transform, and reference competition scores.*
+Validates analytical area (`0.245625`), rotation transform, and reference competition scores.
 
 ---
 
