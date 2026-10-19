@@ -38,7 +38,7 @@ The `visualizer.py` script provides command-line tools for scoring, static rende
 ```bash
 python3 visualizer.py --file submission.csv --score
 ```
-Outputs total score $\sum (L_n^2 / n)$, average score per $N$, collision count, and highest/lowest density configurations.
+Outputs total score $\sum \frac{L_n^2}{n}$, average score per $N$, collision count, and highest/lowest density configurations.
 
 ### 2. Compare Two Submissions Head-to-Head
 ```bash
