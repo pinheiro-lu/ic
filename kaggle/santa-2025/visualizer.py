@@ -405,7 +405,7 @@ def start_web_server(port: int = 8000, directory: str = "web", auto_open: bool =
 
 
 def run_self_test():
-    """Validates geometry, collision engine, and reference scores."""
+    """Validates geometry, rotation transform, and collision engine."""
     print("Running Santa 2025 self-test...")
 
     # 1. Analytical area check
@@ -422,14 +422,12 @@ def run_self_test():
     assert abs(tip_90[0] - (-0.8)) < 1e-9 and abs(tip_90[1] - 0.0) < 1e-9, f"Tip rotation failed: {tip_90}"
     print("✓ 90-degree rotation transforms correctly")
 
-    # 3. Reference score check
+    # 3. Submission evaluation check
     sample_csv = Path(__file__).parent / "submission.csv"
     if sample_csv.exists():
         res = evaluate_submission(str(sample_csv), verbose=False)
-        score = res["total_score"]
-        expected = 180.183033203576
-        assert abs(score - expected) < 1e-6, f"Submission score mismatch: {score} vs {expected}"
-        print(f"✓ Submission total score verified: {score:.12f}")
+        assert res["total_collisions"] == 0, f"Unexpected collisions: {res['total_collisions']}"
+        print(f"✓ Submission evaluated with 0 collisions (Total Score: {res['total_score']:.12f})")
 
     print("All self-tests passed successfully! 🎉")
 

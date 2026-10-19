@@ -61,7 +61,7 @@ python3 visualizer.py --file submission.csv --gallery --out santa_2025_all.png
 ```bash
 python3 visualizer.py --test
 ```
-Validates analytical area (`0.245625`), rotation transform, and reference competition scores.
+Validates analytical area (`0.245625`), rotation transform, and collision detection.
 
 ---
 
