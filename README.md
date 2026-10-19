@@ -16,6 +16,7 @@
 - **Graph, Tree, Data Structures & Network Optimization**
   - [`icpc/brazil/2026/subreg/e`](icpc/brazil/2026/subreg/e/sol.cpp) ([MOJ `mdp-br-fp-2026#e-edicao`](https://moj.naquadah.com.br/treino/problema/?id=mdp-br-fp-2026%23e-edicao)): *Edição de Rede* (`sol.cpp`, `sol2.cpp`, `sol3.cpp`)
   - [`icpc/brazil/2026/subreg/i`](icpc/brazil/2026/subreg/i/sol.cpp) ([MOJ `mdp-br-fp-2026#i-invations`](https://moj.naquadah.com.br/treino/problema/?id=mdp-br-fp-2026%23i-invations)): *Porquinho-da-Índia* (Dependency Tree DFS + Interval Sweep-line Min-Chairs / Max-Overlap)
+  - [ICPC `106679M` / MOJ `mdp-br-fp-2026#m-microwave` (*Micro-ondas / Microwave*)](https://codeforces.com/gym/106679/submission/389135457): Budget-Constrained Shortest Path / Layered Dijkstra (Subregional 2026)
   - [MOJ `esquenta-uberlandia-2026#placar-ao-vivo` (*Placar ao Vivo*)](https://moj.naquadah.com.br/treino/problema/?id=esquenta-uberlandia-2026%23placar-ao-vivo): Lazy Segment Tree Range-Add / Range-Max Optimization
   - [`icpc/brazil/2026/mpp/e`](icpc/brazil/2026/mpp/e/sol.cpp) ([`106598E`](https://codeforces.com/gym/106598/submission/388055443)): *Space emergency* (HLD + Lazy Segment Tree)
   - [`icpc/brazil/2024/subreg/b`](icpc/brazil/2024/subreg/b/sol.cpp) ([`105327B`](https://codeforces.com/gym/105327/submission/389778446)): *Bacon Number*
