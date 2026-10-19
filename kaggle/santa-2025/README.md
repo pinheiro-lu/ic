@@ -93,10 +93,10 @@ A symmetrical 15-vertex polygon consisting of 3 tiered foliage layers and a rect
 
 ### 2. The Evaluation Metric
 
-For each configuration $n \in \{1, \dots, 200\}$:
+For each configuration $n \in [1, 200]$:
 
 $$
-L_n = \max(x_{\max} - x_{\min},\; y_{\max} - y_{\min})
+L_n = \max(x_{\max} - x_{\min}, y_{\max} - y_{\min})
 $$
 
 $$
