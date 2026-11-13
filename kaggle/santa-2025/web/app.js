@@ -204,6 +204,8 @@ class VisualizerState {
     this.currentDatasetName = '';
     this.currentN = 1;
     this.selectedTreeIndex = null;
+    this.selectedTreeIndices = new Set();
+    this.groupRotationAngle = 0;
     this.hoveredTreeIndex = null;
 
     // Undo / Redo history for editing
@@ -217,9 +219,12 @@ class VisualizerState {
 
     // Mouse interaction states
     this.isDragging = false;
-    this.dragMode = null; // 'pan', 'moveTree', 'rotateTree'
+    this.dragMode = null; // 'pan', 'moveTree', 'rotateTree', 'boxSelect'
     this.dragStart = { x: 0, y: 0, wx: 0, wy: 0 };
     this.dragTreeInitial = { x: 0, y: 0, deg: 0 };
+    this.dragGroupInitial = new Map(); // idx -> [x, y, deg]
+    this.dragGroupCenter = { x: 0, y: 0, startAngle: 0 };
+    this.selectionBox = null; // { sx0, sy0, sx1, sy1 }
 
     // Display settings
     this.settings = {
@@ -269,6 +274,108 @@ class VisualizerState {
     const ds = this.datasets[this.currentDatasetName];
     if (!ds) return [];
     return ds[String(this.currentN)] || [];
+  }
+
+  hasSelection() {
+    return this.selectedTreeIndices.size > 0;
+  }
+
+  isSelected(idx) {
+    return this.selectedTreeIndices.has(idx);
+  }
+
+  clearSelection() {
+    this.selectedTreeIndices.clear();
+    this.selectedTreeIndex = null;
+    this.groupRotationAngle = 0;
+  }
+
+  selectSingle(idx) {
+    this.selectedTreeIndices.clear();
+    if (idx !== null && idx !== undefined) {
+      this.selectedTreeIndices.add(idx);
+      this.selectedTreeIndex = idx;
+    } else {
+      this.selectedTreeIndex = null;
+    }
+    this.groupRotationAngle = 0;
+  }
+
+  toggleSelection(idx) {
+    if (this.selectedTreeIndices.has(idx)) {
+      this.selectedTreeIndices.delete(idx);
+      if (this.selectedTreeIndex === idx) {
+        const remaining = Array.from(this.selectedTreeIndices);
+        this.selectedTreeIndex = remaining.length > 0 ? remaining[remaining.length - 1] : null;
+      }
+    } else {
+      this.selectedTreeIndices.add(idx);
+      this.selectedTreeIndex = idx;
+    }
+    this.groupRotationAngle = 0;
+  }
+
+  selectAll() {
+    const trees = this.getCurrentTrees();
+    this.selectedTreeIndices.clear();
+    for (let i = 0; i < trees.length; i++) {
+      this.selectedTreeIndices.add(i);
+    }
+    this.selectedTreeIndex = trees.length > 0 ? trees.length - 1 : null;
+    this.groupRotationAngle = 0;
+  }
+
+  getSelectionCenter() {
+    const trees = this.getCurrentTrees();
+    const indices = Array.from(this.selectedTreeIndices).filter(i => trees[i]);
+    if (indices.length === 0) return null;
+    if (indices.length === 1) {
+      const t = trees[indices[0]];
+      return { cx: t[0], cy: t[1], deg: t[2], count: 1 };
+    }
+    let sumX = 0, sumY = 0;
+    for (const idx of indices) {
+      sumX += trees[idx][0];
+      sumY += trees[idx][1];
+    }
+    return {
+      cx: sumX / indices.length,
+      cy: sumY / indices.length,
+      deg: this.groupRotationAngle,
+      count: indices.length
+    };
+  }
+
+  translateSelectionBy(dx, dy) {
+    const trees = this.getCurrentTrees();
+    for (const idx of this.selectedTreeIndices) {
+      if (trees[idx]) {
+        trees[idx][0] += dx;
+        trees[idx][1] += dy;
+      }
+    }
+  }
+
+  rotateSelectionBy(deltaDeg) {
+    const center = this.getSelectionCenter();
+    if (!center) return;
+    const trees = this.getCurrentTrees();
+    const rad = (deltaDeg * Math.PI) / 180;
+    const cosA = Math.cos(rad);
+    const sinA = Math.sin(rad);
+
+    for (const idx of this.selectedTreeIndices) {
+      const t = trees[idx];
+      if (!t) continue;
+      if (center.count > 1) {
+        const rx = t[0] - center.cx;
+        const ry = t[1] - center.cy;
+        t[0] = center.cx + (rx * cosA - ry * sinA);
+        t[1] = center.cy + (rx * sinA + ry * cosA);
+      }
+      t[2] = ((t[2] + deltaDeg) % 360 + 360) % 360;
+    }
+    this.groupRotationAngle = ((this.groupRotationAngle + deltaDeg) % 360 + 360) % 360;
   }
 
   setCurrentTrees(trees, recordHistory = true) {
@@ -527,12 +634,17 @@ function render() {
   // 4. Draw Trees
   drawTrees();
 
-  // 5. Draw Transform Gizmo for selected tree
-  if (state.selectedTreeIndex !== null) {
+  // 5. Draw Transform Gizmo for selected tree(s)
+  if (state.hasSelection()) {
     drawSelectedGizmo();
   }
 
-  // 6. Update UI elements and statistics
+  // 6. Draw Marquee Selection Box (if dragging box select)
+  if (state.dragMode === 'boxSelect' && state.selectionBox) {
+    drawSelectionBox();
+  }
+
+  // 7. Update UI elements and statistics
   updateUI();
 }
 
@@ -683,7 +795,7 @@ function drawTrees() {
     const poly = state.treePolygons[i];
     if (!poly) continue;
 
-    const isSelected = state.selectedTreeIndex === i;
+    const isSelected = state.isSelected(i);
     const isHovered = state.hoveredTreeIndex === i;
     const isColliding = state.collisions.has(i);
 
@@ -773,16 +885,27 @@ function drawTipStar(sx, sy, isSelected) {
 }
 
 function drawSelectedGizmo() {
-  const idx = state.selectedTreeIndex;
-  const trees = state.getCurrentTrees();
-  if (idx === null || !trees[idx]) return;
+  const center = state.getSelectionCenter();
+  if (!center) return;
 
-  const [cx, cy, deg] = trees[idx];
+  const { cx, cy, deg, count } = center;
   const [scX, scY] = worldToScreen(cx, cy);
 
   const radius = Math.max(30, 0.85 * state.zoom); // Dynamic gizmo radius
 
   ctx.save();
+
+  // If multiple trees are selected, draw a subtle group center marker
+  if (count > 1) {
+    ctx.beginPath();
+    ctx.arc(scX, scY, 5, 0, Math.PI * 2);
+    ctx.fillStyle = '#f0c034';
+    ctx.fill();
+    ctx.lineWidth = 1.5;
+    ctx.strokeStyle = '#000';
+    ctx.stroke();
+  }
+
   // Draw subtle dashed rotation circle
   ctx.beginPath();
   ctx.arc(scX, scY, radius, 0, Math.PI * 2);
@@ -814,6 +937,24 @@ function drawSelectedGizmo() {
   ctx.lineWidth = 1.5;
   ctx.stroke();
 
+  ctx.restore();
+}
+
+function drawSelectionBox() {
+  const box = state.selectionBox;
+  if (!box) return;
+  const x = Math.min(box.sx0, box.sx1);
+  const y = Math.min(box.sy0, box.sy1);
+  const w = Math.abs(box.sx1 - box.sx0);
+  const h = Math.abs(box.sy1 - box.sy0);
+
+  ctx.save();
+  ctx.fillStyle = 'rgba(240, 192, 52, 0.12)';
+  ctx.fillRect(x, y, w, h);
+  ctx.setLineDash([5, 4]);
+  ctx.strokeStyle = '#f0c034';
+  ctx.lineWidth = 1.5;
+  ctx.strokeRect(x, y, w, h);
   ctx.restore();
 }
 
@@ -882,22 +1023,24 @@ function updateUI() {
   const badge = document.getElementById('selectedTreeBadge');
   const banner = document.getElementById('treeBanner');
 
-  if (state.selectedTreeIndex !== null) {
-    const idx = state.selectedTreeIndex;
-    const trees = state.getCurrentTrees();
-    const tree = trees[idx];
-    if (tree) {
-      inspectorSection.classList.remove('disabled-section');
-      badge.textContent = `Tree #${idx}`;
-      document.getElementById('treeXInput').value = tree[0].toFixed(5);
-      document.getElementById('treeYInput').value = tree[1].toFixed(5);
-      document.getElementById('treeDegInput').value = tree[2].toFixed(2);
-      document.getElementById('treeDegSlider').value = (tree[2] % 360 + 360) % 360;
+  const center = state.getSelectionCenter();
+  if (center) {
+    inspectorSection.classList.remove('disabled-section');
+    document.getElementById('treeXInput').value = center.cx.toFixed(5);
+    document.getElementById('treeYInput').value = center.cy.toFixed(5);
+    document.getElementById('treeDegInput').value = center.deg.toFixed(2);
+    document.getElementById('treeDegSlider').value = (center.deg % 360 + 360) % 360;
 
-      // Floating banner
-      banner.classList.remove('hidden');
+    banner.classList.remove('hidden');
+    if (center.count === 1) {
+      const idx = state.selectedTreeIndex;
+      badge.textContent = `Tree #${idx}`;
       document.getElementById('bannerTreeTitle').textContent = `Tree #${idx} of ${state.currentN}`;
-      document.getElementById('bannerTreeCoords').textContent = `(x: ${tree[0].toFixed(4)}, y: ${tree[1].toFixed(4)}, deg: ${tree[2].toFixed(1)}°)`;
+      document.getElementById('bannerTreeCoords').textContent = `(x: ${center.cx.toFixed(4)}, y: ${center.cy.toFixed(4)}, deg: ${center.deg.toFixed(1)}°)`;
+    } else {
+      badge.textContent = `${center.count} Trees`;
+      document.getElementById('bannerTreeTitle').textContent = `${center.count} Trees Selected`;
+      document.getElementById('bannerTreeCoords').textContent = `Center (x: ${center.cx.toFixed(4)}, y: ${center.cy.toFixed(4)}, Δdeg: ${center.deg.toFixed(1)}°)`;
     }
   } else {
     inspectorSection.classList.add('disabled-section');
@@ -965,12 +1108,10 @@ function findTreeAtScreenPoint(sx, sy) {
 }
 
 function isOverRotationHandle(sx, sy) {
-  if (state.selectedTreeIndex === null) return false;
-  const trees = state.getCurrentTrees();
-  const tree = trees[state.selectedTreeIndex];
-  if (!tree) return false;
+  const center = state.getSelectionCenter();
+  if (!center) return false;
 
-  const [cx, cy, deg] = tree;
+  const { cx, cy, deg } = center;
   const [scX, scY] = worldToScreen(cx, cy);
   const radius = Math.max(30, 0.85 * state.zoom);
 
@@ -980,6 +1121,20 @@ function isOverRotationHandle(sx, sy) {
 
   const dist = Math.hypot(sx - hX, sy - hY);
   return dist <= 12; // 12px hit radius
+}
+
+function snapshotSelectedGroupInitial() {
+  const trees = state.getCurrentTrees();
+  state.dragGroupInitial.clear();
+  for (const idx of state.selectedTreeIndices) {
+    if (trees[idx]) {
+      state.dragGroupInitial.set(idx, [trees[idx][0], trees[idx][1], trees[idx][2]]);
+    }
+  }
+  const center = state.getSelectionCenter();
+  if (center) {
+    state.dragGroupCenter = { x: center.cx, y: center.cy, startAngle: center.deg };
+  }
 }
 
 container.addEventListener('mousedown', (e) => {
@@ -993,11 +1148,10 @@ container.addEventListener('mousedown', (e) => {
   state.isDragging = true;
   state.dragStart = { x: sx, y: sy, wx, wy };
 
-  // Check 1: Rotation handle of selected tree
+  // Check 1: Rotation handle of selected tree(s)
   if (isOverRotationHandle(sx, sy)) {
     state.dragMode = 'rotateTree';
-    const tree = state.getCurrentTrees()[state.selectedTreeIndex];
-    state.dragTreeInitial = { x: tree[0], y: tree[1], deg: tree[2] };
+    snapshotSelectedGroupInitial();
     state.pushHistoryState();
     return;
   }
@@ -1005,19 +1159,35 @@ container.addEventListener('mousedown', (e) => {
   // Check 2: Clicked on a tree
   const clickedTree = findTreeAtScreenPoint(sx, sy);
   if (clickedTree !== null && e.button === 0) {
-    state.selectedTreeIndex = clickedTree;
-    state.dragMode = 'moveTree';
-    const tree = state.getCurrentTrees()[clickedTree];
-    state.dragTreeInitial = { x: tree[0], y: tree[1], deg: tree[2] };
-    state.pushHistoryState();
+    if (e.shiftKey || e.ctrlKey || e.metaKey) {
+      state.toggleSelection(clickedTree);
+    } else if (!state.isSelected(clickedTree)) {
+      state.selectSingle(clickedTree);
+    }
+    if (state.hasSelection()) {
+      state.dragMode = 'moveTree';
+      snapshotSelectedGroupInitial();
+      state.pushHistoryState();
+    } else {
+      state.dragMode = null;
+      state.isDragging = false;
+    }
     render();
     return;
   }
 
-  // Check 3: Clicked empty canvas -> pan
+  // Check 3: Shift + Drag on empty canvas -> Box / Marquee select
+  if (e.button === 0 && e.shiftKey) {
+    state.dragMode = 'boxSelect';
+    state.selectionBox = { sx0: sx, sy0: sy, sx1: sx, sy1: sy };
+    render();
+    return;
+  }
+
+  // Check 4: Clicked empty canvas -> pan
   state.dragMode = 'pan';
-  if (e.button === 0 && !e.shiftKey) {
-    state.selectedTreeIndex = null;
+  if (e.button === 0) {
+    state.clearSelection();
   }
   render();
 });
@@ -1056,43 +1226,85 @@ window.addEventListener('mousemove', (e) => {
     state.dragStart.y = sy;
     container.style.cursor = 'grabbing';
     render();
+  } else if (state.dragMode === 'boxSelect') {
+    state.selectionBox.sx1 = sx;
+    state.selectionBox.sy1 = sy;
+    container.style.cursor = 'crosshair';
+    render();
   } else if (state.dragMode === 'moveTree') {
     const dx = wx - state.dragStart.wx;
     const dy = wy - state.dragStart.wy;
     const trees = state.getCurrentTrees();
-    const tree = trees[state.selectedTreeIndex];
-    if (tree) {
-      tree[0] = state.dragTreeInitial.x + dx;
-      tree[1] = state.dragTreeInitial.y + dy;
-      state.recalculateCurrentConfig();
-      state.recalculateTotalScore();
-      render();
+    for (const [idx, init] of state.dragGroupInitial.entries()) {
+      if (trees[idx]) {
+        trees[idx][0] = init[0] + dx;
+        trees[idx][1] = init[1] + dy;
+      }
     }
+    state.recalculateCurrentConfig();
+    state.recalculateTotalScore();
+    render();
   } else if (state.dragMode === 'rotateTree') {
     const trees = state.getCurrentTrees();
-    const tree = trees[state.selectedTreeIndex];
-    if (tree) {
-      const [scX, scY] = worldToScreen(tree[0], tree[1]);
-      // Angle from center to mouse position
-      const angleRad = Math.atan2(sx - scX, scY - sy);
-      let angleDeg = (angleRad * 180) / Math.PI;
-      if (angleDeg < 0) angleDeg += 360;
+    const { x: gx, y: gy, startAngle } = state.dragGroupCenter;
+    const [scX, scY] = worldToScreen(gx, gy);
 
-      // Snap to 15 deg if Shift is held
-      if (e.shiftKey) {
-        angleDeg = Math.round(angleDeg / 15) * 15;
-      }
+    // Angle from center to mouse position
+    const angleRad = Math.atan2(sx - scX, scY - sy);
+    let angleDeg = (angleRad * 180) / Math.PI;
+    if (angleDeg < 0) angleDeg += 360;
 
-      tree[2] = angleDeg;
-      state.recalculateCurrentConfig();
-      state.recalculateTotalScore();
-      render();
+    // Snap to 15 deg if Shift is held
+    if (e.shiftKey) {
+      angleDeg = Math.round(angleDeg / 15) * 15;
     }
+
+    const deltaDeg = angleDeg - startAngle;
+    const rad = (deltaDeg * Math.PI) / 180;
+    const cosA = Math.cos(rad);
+    const sinA = Math.sin(rad);
+
+    for (const [idx, init] of state.dragGroupInitial.entries()) {
+      if (!trees[idx]) continue;
+      if (state.dragGroupInitial.size > 1) {
+        const rx = init[0] - gx;
+        const ry = init[1] - gy;
+        trees[idx][0] = gx + (rx * cosA - ry * sinA);
+        trees[idx][1] = gy + (rx * sinA + ry * cosA);
+      }
+      trees[idx][2] = ((init[2] + deltaDeg) % 360 + 360) % 360;
+    }
+    state.groupRotationAngle = angleDeg;
+    state.recalculateCurrentConfig();
+    state.recalculateTotalScore();
+    render();
   }
 });
 
-window.addEventListener('mouseup', () => {
+window.addEventListener('mouseup', (e) => {
   if (state.isDragging) {
+    if (state.dragMode === 'boxSelect' && state.selectionBox) {
+      const box = state.selectionBox;
+      const [wx0, wy0] = screenToWorld(Math.min(box.sx0, box.sx1), Math.max(box.sy0, box.sy1));
+      const [wx1, wy1] = screenToWorld(Math.max(box.sx0, box.sx1), Math.min(box.sy0, box.sy1));
+      const trees = state.getCurrentTrees();
+
+      if (!e.ctrlKey && !e.metaKey) {
+        // Keep existing selection if Shift+Drag was used to add to selection
+      }
+      for (let i = 0; i < trees.length; i++) {
+        const [cx, cy] = trees[i];
+        const aabb = state.treeAABBs[i];
+        const centerInside = cx >= wx0 && cx <= wx1 && cy >= wy0 && cy <= wy1;
+        const aabbIntersects = aabb && aabb.maxX >= wx0 && aabb.minX <= wx1 && aabb.maxY >= wy0 && aabb.minY <= wy1;
+        if (centerInside || aabbIntersects) {
+          state.selectedTreeIndices.add(i);
+          state.selectedTreeIndex = i;
+        }
+      }
+      state.groupRotationAngle = 0;
+      state.selectionBox = null;
+    }
     state.isDragging = false;
     state.dragMode = null;
     container.style.cursor = 'grab';
@@ -1107,12 +1319,11 @@ container.addEventListener('wheel', (e) => {
   const sx = e.clientX - rect.left;
   const sy = e.clientY - rect.top;
 
-  // If hovering over selected tree and Alt/Ctrl key is held, rotate tree instead
-  if (state.selectedTreeIndex !== null && (e.altKey || e.ctrlKey)) {
-    const trees = state.getCurrentTrees();
-    const tree = trees[state.selectedTreeIndex];
+  // If trees are selected and Alt/Ctrl key is held, rotate selection instead
+  if (state.hasSelection() && (e.altKey || e.ctrlKey)) {
     const step = e.shiftKey ? 15 : 1;
-    tree[2] = (tree[2] + (e.deltaY < 0 ? step : -step) + 360) % 360;
+    const delta = e.deltaY < 0 ? step : -step;
+    state.rotateSelectionBy(delta);
     state.recalculateCurrentConfig();
     state.recalculateTotalScore();
     render();
@@ -1138,6 +1349,13 @@ window.addEventListener('keydown', (e) => {
   // Don't trigger shortcuts if user is typing in an input
   if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) return;
 
+  if ((e.ctrlKey || e.metaKey) && (e.key === 'a' || e.key === 'A')) {
+    e.preventDefault();
+    state.selectAll();
+    render();
+    return;
+  }
+
   if (e.key === 'ArrowLeft') {
     e.preventDefault();
     changeN(state.currentN - 1);
@@ -1154,21 +1372,33 @@ window.addEventListener('keydown', (e) => {
     e.preventDefault();
     fitViewToSquare();
   } else if (e.key === 'r' || e.key === 'R') {
-    if (state.selectedTreeIndex !== null) {
+    if (state.hasSelection()) {
       e.preventDefault();
       state.pushHistoryState();
-      const trees = state.getCurrentTrees();
       const step = e.shiftKey ? -15 : 15;
-      trees[state.selectedTreeIndex][2] = (trees[state.selectedTreeIndex][2] + step + 360) % 360;
+      state.rotateSelectionBy(step);
+      state.recalculateCurrentConfig();
+      state.recalculateTotalScore();
+      render();
+    }
+  } else if (['w', 'a', 's', 'd', 'W', 'A', 'S', 'D'].includes(e.key) && !e.ctrlKey && !e.metaKey) {
+    if (state.hasSelection()) {
+      e.preventDefault();
+      state.pushHistoryState();
+      const step = e.shiftKey ? 0.05 : 0.01;
+      const k = e.key.toLowerCase();
+      const dx = k === 'd' ? step : k === 'a' ? -step : 0;
+      const dy = k === 'w' ? step : k === 's' ? -step : 0;
+      state.translateSelectionBy(dx, dy);
       state.recalculateCurrentConfig();
       state.recalculateTotalScore();
       render();
     }
   } else if (e.key === 'Escape') {
-    state.selectedTreeIndex = null;
+    state.clearSelection();
     render();
   } else if (e.key === 'Delete' || e.key === 'Backspace') {
-    if (state.selectedTreeIndex !== null) {
+    if (state.hasSelection()) {
       deleteSelectedTree();
     }
   } else if ((e.ctrlKey || e.metaKey) && (e.key === 'z' || e.key === 'Z')) {
@@ -1185,7 +1415,7 @@ window.addEventListener('keydown', (e) => {
 
 function changeN(newN) {
   state.currentN = Math.max(1, Math.min(200, newN));
-  state.selectedTreeIndex = null;
+  state.clearSelection();
   state.history = [JSON.parse(JSON.stringify(state.getCurrentTrees()))];
   state.historyIndex = 0;
   updateHistoryButtons();
@@ -1219,9 +1449,11 @@ document.getElementById('resetOriginBtn').addEventListener('click', () => {
 
 // Inspector Inputs
 document.getElementById('treeXInput').addEventListener('change', (e) => {
-  if (state.selectedTreeIndex !== null) {
+  const center = state.getSelectionCenter();
+  if (center) {
     state.pushHistoryState();
-    state.getCurrentTrees()[state.selectedTreeIndex][0] = parseFloat(e.target.value) || 0;
+    const targetX = parseFloat(e.target.value) || 0;
+    state.translateSelectionBy(targetX - center.cx, 0);
     state.recalculateCurrentConfig();
     state.recalculateTotalScore();
     render();
@@ -1229,9 +1461,11 @@ document.getElementById('treeXInput').addEventListener('change', (e) => {
 });
 
 document.getElementById('treeYInput').addEventListener('change', (e) => {
-  if (state.selectedTreeIndex !== null) {
+  const center = state.getSelectionCenter();
+  if (center) {
     state.pushHistoryState();
-    state.getCurrentTrees()[state.selectedTreeIndex][1] = parseFloat(e.target.value) || 0;
+    const targetY = parseFloat(e.target.value) || 0;
+    state.translateSelectionBy(0, targetY - center.cy);
     state.recalculateCurrentConfig();
     state.recalculateTotalScore();
     render();
@@ -1239,9 +1473,11 @@ document.getElementById('treeYInput').addEventListener('change', (e) => {
 });
 
 document.getElementById('treeDegInput').addEventListener('change', (e) => {
-  if (state.selectedTreeIndex !== null) {
+  const center = state.getSelectionCenter();
+  if (center) {
     state.pushHistoryState();
-    state.getCurrentTrees()[state.selectedTreeIndex][2] = parseFloat(e.target.value) || 0;
+    const targetDeg = parseFloat(e.target.value) || 0;
+    state.rotateSelectionBy(targetDeg - center.deg);
     state.recalculateCurrentConfig();
     state.recalculateTotalScore();
     render();
@@ -1249,8 +1485,10 @@ document.getElementById('treeDegInput').addEventListener('change', (e) => {
 });
 
 document.getElementById('treeDegSlider').addEventListener('input', (e) => {
-  if (state.selectedTreeIndex !== null) {
-    state.getCurrentTrees()[state.selectedTreeIndex][2] = parseFloat(e.target.value);
+  const center = state.getSelectionCenter();
+  if (center) {
+    const targetDeg = parseFloat(e.target.value);
+    state.rotateSelectionBy(targetDeg - center.deg);
     state.recalculateCurrentConfig();
     state.recalculateTotalScore();
     render();
@@ -1259,9 +1497,11 @@ document.getElementById('treeDegSlider').addEventListener('input', (e) => {
 
 document.querySelectorAll('.angle-btn').forEach(btn => {
   btn.addEventListener('click', () => {
-    if (state.selectedTreeIndex !== null) {
+    const center = state.getSelectionCenter();
+    if (center) {
       state.pushHistoryState();
-      state.getCurrentTrees()[state.selectedTreeIndex][2] = parseFloat(btn.getAttribute('data-angle'));
+      const targetDeg = parseFloat(btn.getAttribute('data-angle'));
+      state.rotateSelectionBy(targetDeg - center.deg);
       state.recalculateCurrentConfig();
       state.recalculateTotalScore();
       render();
@@ -1270,10 +1510,9 @@ document.querySelectorAll('.angle-btn').forEach(btn => {
 });
 
 document.getElementById('rotateMinus15Btn').addEventListener('click', () => {
-  if (state.selectedTreeIndex !== null) {
+  if (state.hasSelection()) {
     state.pushHistoryState();
-    const tree = state.getCurrentTrees()[state.selectedTreeIndex];
-    tree[2] = (tree[2] - 15 + 360) % 360;
+    state.rotateSelectionBy(-15);
     state.recalculateCurrentConfig();
     state.recalculateTotalScore();
     render();
@@ -1281,10 +1520,9 @@ document.getElementById('rotateMinus15Btn').addEventListener('click', () => {
 });
 
 document.getElementById('rotatePlus15Btn').addEventListener('click', () => {
-  if (state.selectedTreeIndex !== null) {
+  if (state.hasSelection()) {
     state.pushHistoryState();
-    const tree = state.getCurrentTrees()[state.selectedTreeIndex];
-    tree[2] = (tree[2] + 15) % 360;
+    state.rotateSelectionBy(15);
     state.recalculateCurrentConfig();
     state.recalculateTotalScore();
     render();
@@ -1292,11 +1530,16 @@ document.getElementById('rotatePlus15Btn').addEventListener('click', () => {
 });
 
 function deleteSelectedTree() {
-  if (state.selectedTreeIndex !== null) {
+  if (state.hasSelection()) {
     state.pushHistoryState();
     const trees = state.getCurrentTrees();
-    trees.splice(state.selectedTreeIndex, 1);
-    state.selectedTreeIndex = null;
+    const sortedDesc = Array.from(state.selectedTreeIndices).sort((a, b) => b - a);
+    for (const idx of sortedDesc) {
+      if (idx >= 0 && idx < trees.length) {
+        trees.splice(idx, 1);
+      }
+    }
+    state.clearSelection();
     state.recalculateCurrentConfig();
     state.recalculateTotalScore();
     render();
@@ -1305,21 +1548,32 @@ function deleteSelectedTree() {
 
 document.getElementById('deleteTreeBtn').addEventListener('click', deleteSelectedTree);
 document.getElementById('deselectTreeBtn').addEventListener('click', () => {
-  state.selectedTreeIndex = null;
+  state.clearSelection();
   render();
 });
 document.getElementById('bannerDeselectBtn').addEventListener('click', () => {
-  state.selectedTreeIndex = null;
+  state.clearSelection();
   render();
 });
 
 document.getElementById('duplicateTreeBtn').addEventListener('click', () => {
-  if (state.selectedTreeIndex !== null) {
+  if (state.hasSelection()) {
     state.pushHistoryState();
     const trees = state.getCurrentTrees();
-    const src = trees[state.selectedTreeIndex];
-    trees.push([src[0] + 0.2, src[1] + 0.2, src[2]]);
-    state.selectedTreeIndex = trees.length - 1;
+    const sortedAsc = Array.from(state.selectedTreeIndices).sort((a, b) => a - b);
+    const newIndices = [];
+    for (const idx of sortedAsc) {
+      const src = trees[idx];
+      if (src) {
+        trees.push([src[0] + 0.2, src[1] + 0.2, src[2]]);
+        newIndices.push(trees.length - 1);
+      }
+    }
+    state.clearSelection();
+    for (const idx of newIndices) {
+      state.selectedTreeIndices.add(idx);
+      state.selectedTreeIndex = idx;
+    }
     state.recalculateCurrentConfig();
     state.recalculateTotalScore();
     render();
@@ -1334,7 +1588,7 @@ document.getElementById('addTreeBtn').addEventListener('click', () => {
   const cx = sq.x + sq.side / 2;
   const cy = sq.y + sq.side / 2;
   trees.push([cx, cy, 0]);
-  state.selectedTreeIndex = trees.length - 1;
+  state.selectSingle(trees.length - 1);
   state.recalculateCurrentConfig();
   state.recalculateTotalScore();
   render();
