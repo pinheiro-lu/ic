@@ -1,0 +1,16 @@
+# Kaggle data: keep locally, do not commit to the repository
+data/*
+!data/.gitkeep
+
+# Large generated submissions; record scores and hashes instead
+results/*.csv
+results/*.json
+!results/experiments.csv
+!results/README.md
+
+__pycache__/
+*.py[cod]
+.venv/
+.env
+.pytest_cache/
+.DS_Store
