@@ -82,7 +82,8 @@ def solve(starts, targets, limit, base, registers=48):
         for exp in range(2, powers + 1):
             emit("*", c + exp - 2, c, c + exp - 1)
 
-    for target in sorted(set(targets)):
+    # Larger targets first: mark smaller targets produced as intermediate sums.
+    for target in sorted(set(targets), reverse=True):
         if target not in remaining:
             continue
         x, exp, has_acc = target, 0, False
