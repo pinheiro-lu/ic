@@ -1,3 +1,5 @@
 version,git_commit,dataset,puzzles,total_instructions,max_program_instructions,valid_puzzles,notes
 v0.1.0,1de1e877d43e,scored,1000,902521,2873,1000,"Original binary-powers approach; 48 registers; register recycling"
 v0.1.0,1de1e877d43e,practice,200,197840,2838,200,"Original binary-powers approach; freshly reproduced benchmark"
+exp-base3,ae5c19a8d43d,scored,1000,657147,1252,1000,"Ternary powers in registers; independent integer simulation; better on 386 puzzles"
+exp-base3,ae5c19a8d43d,practice,200,133729,1275,200,"Ternary powers in registers; independent integer simulation; better on 92 puzzles"
