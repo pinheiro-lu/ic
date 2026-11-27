@@ -3,3 +3,5 @@ v0.1.0,1de1e877d43e,scored,1000,902521,2873,1000,"Original binary-powers approac
 v0.1.0,1de1e877d43e,practice,200,197840,2838,200,"Original binary-powers approach; freshly reproduced benchmark"
 v0.2.0,4d3e29ed8e71,scored,1000,397208,745,1000,"Portfolio of positional bases 2-74; min instructions per puzzle; independently validated"
 v0.2.0,4d3e29ed8e71,practice,200,80511,742,200,"Portfolio of positional bases 2-74; min instructions per puzzle; independently validated"
+exp-reverse-order,feb7172badb0,scored,1000,397191,745,1000,"Positional bases 2-74; process targets descending; mark encountered targets; 17 instructions saved over v0.2.0"
+exp-reverse-order,feb7172badb0,practice,200,80507,742,200,"Positional bases 2-74; process targets descending; mark encountered targets; 4 instructions saved over v0.2.0"
