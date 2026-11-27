@@ -15,16 +15,16 @@ See [all base scores](base_sweep_2_47.csv). Lower is better. Reported scores are
 
 ## Reproduce
 
-\`\`\`bash
+```bash
 cd kaggle/santa-2026
 python3 src/santa2026_bases_2_47.py --data data/puzzles.csv data/practice_puzzles.csv --output-dir results/
-\`\`\`
+```
 
-The command produces \`portfolio_scored_2_47.csv\`, \`portfolio_practice_2_47.csv\`, and a detailed \`base_scores_2_47.csv\`. Submissions are not committed to Git.
+The command produces `portfolio_scored_2_47.csv`, `portfolio_practice_2_47.csv`, and a detailed `base_scores_2_47.csv`. Submissions are not committed to Git.
 
 Input dataset SHA-256:
 
-\`\`\`
+```
 b0c70d849eca078a0e1cf9a4f7b47fd40b7435663f6f84de6725f84724500428  data/puzzles.csv
 a87e4e0ad263f31af1a9e51459117212b03404339c5940be3aa6afd1596ff6d9  data/practice_puzzles.csv
-\`\`\`
+```
