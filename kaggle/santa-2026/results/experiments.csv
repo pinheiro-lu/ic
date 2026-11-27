@@ -1,3 +1,5 @@
 version,git_commit,dataset,puzzles,total_instructions,max_program_instructions,valid_puzzles,notes
 v0.1.0,1de1e877d43e,scored,1000,902521,2873,1000,"Original binary-powers approach; 48 registers; register recycling"
 v0.1.0,1de1e877d43e,practice,200,197840,2838,200,"Original binary-powers approach; freshly reproduced benchmark"
+v0.2.0,4d3e29ed8e71,scored,1000,397208,745,1000,"Portfolio of positional bases 2-74; min instructions per puzzle; independently validated"
+v0.2.0,4d3e29ed8e71,practice,200,80511,742,200,"Portfolio of positional bases 2-74; min instructions per puzzle; independently validated"
